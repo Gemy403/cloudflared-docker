@@ -1,33 +1,46 @@
 version: '3.8'
 
-
 services:
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared
-    command: tunnel --no-autoupdate run --token token_here
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.1'
-          memory: 128M
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-
-  watchtower:
-    image: containrrr/watchtower:latest
-    container_name: watchtower
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.1'
-          memory: 128M
-    environment:
-      WATCHTOWER_CLEANUP: "true"
-      WATCHTOWER_POLL_INTERVAL: "86400"  # Check every 24 hours
-      WATCHTOWER_LABEL_ENABLE: "true"    # Only update labeled containers
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+  watchtower:
+    image: containrrr/watchtower:1.7.1  
+    container_name: watchtower
+    restart: unless-stopped
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400
+      - WATCHTOWER_LABEL_ENABLE=true
+      - DOCKER_API_VERSION=1.44  
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      options:
+        max-size: "5m"
+        max-file: "2"
